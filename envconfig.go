@@ -195,7 +195,7 @@ func Process(prefix string, spec interface{}) error {
 			value, ok = lookupEnv(info.Alt)
 		}
 
-		def := info.Tags.Get("default")
+		def := info.Tags.Get("envDefault")
 		if def != "" && !ok {
 			value = def
 		}
