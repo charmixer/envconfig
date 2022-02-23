@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
@@ -35,7 +34,7 @@ func (cu *CustomURL) UnmarshalBinary(data []byte) error {
 
 type Specification struct {
 	Embedded                     `desc:"can we document a struct"`
-	EmbeddedButIgnored           `ignored:"true"`
+	EmbeddedButIgnored           `envconfig:"-"`
 	Debug                        bool
 	Port                         int
 	Rate                         float32
@@ -56,10 +55,8 @@ type Specification struct {
 	MultiWordVarWithLowerCaseAlt string  `envconfig:"multi_word_var_with_lower_case_alt"`
 	NoPrefixWithAlt              string  `envconfig:"SERVICE_HOST"`
 	DefaultVar                   string  `default:"foobar"`
-	RequiredVar                  string  `required:"True"`
 	NoPrefixDefault              string  `envconfig:"BROKER" default:"127.0.0.1"`
-	RequiredDefault              string  `required:"true" default:"foo2bar"`
-	Ignored                      string  `ignored:"true"`
+	Ignored                      string  `envconfig:"-"`
 	NestedSpecification          struct {
 		Property            string `envconfig:"inner"`
 		PropertyWithDefault string `default:"fuzzybydefault"`
@@ -101,7 +98,6 @@ func TestProcess(t *testing.T) {
 	os.Setenv("ENV_CONFIG_COLORCODES", "red:1,green:2,blue:3")
 	os.Setenv("SERVICE_HOST", "127.0.0.1")
 	os.Setenv("ENV_CONFIG_TTL", "30")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	os.Setenv("ENV_CONFIG_IGNORED", "was-not-ignored")
 	os.Setenv("ENV_CONFIG_OUTER_INNER", "iamnested")
 	os.Setenv("ENV_CONFIG_AFTERNESTED", "after")
@@ -109,8 +105,8 @@ func TestProcess(t *testing.T) {
 	os.Setenv("ENV_CONFIG_DATETIME", "2016-08-16T18:57:05Z")
 	os.Setenv("ENV_CONFIG_MULTI_WORD_VAR_WITH_AUTO_SPLIT", "24")
 	os.Setenv("ENV_CONFIG_MULTI_WORD_ACR_WITH_AUTO_SPLIT", "25")
-	os.Setenv("ENV_CONFIG_URLVALUE", "https://github.com/kelseyhightower/envconfig")
-	os.Setenv("ENV_CONFIG_URLPOINTER", "https://github.com/kelseyhightower/envconfig")
+	os.Setenv("ENV_CONFIG_URLVALUE", "https://github.com/charmixer/envconfig")
+	os.Setenv("ENV_CONFIG_URLPOINTER", "https://github.com/charmixer/envconfig")
 	err := Process("env_config", &s)
 	if err != nil {
 		t.Error(err.Error())
@@ -135,9 +131,6 @@ func TestProcess(t *testing.T) {
 	}
 	if s.Timeout != 2*time.Minute {
 		t.Errorf("expected %s, got %s", 2*time.Minute, s.Timeout)
-	}
-	if s.RequiredVar != "foo" {
-		t.Errorf("expected %s, got %s", "foo", s.RequiredVar)
 	}
 	if len(s.AdminUsers) != 3 ||
 		s.AdminUsers[0] != "John" ||
@@ -181,18 +174,6 @@ func TestProcess(t *testing.T) {
 		t.Errorf("expected '%s' string, got %#v", "iamnested", s.NestedSpecification.Property)
 	}
 
-	if s.NestedSpecification.PropertyWithDefault != "fuzzybydefault" {
-		t.Errorf("expected default '%s' string, got %#v", "fuzzybydefault", s.NestedSpecification.PropertyWithDefault)
-	}
-
-	if s.AfterNested != "after" {
-		t.Errorf("expected default '%s' string, got %#v", "after", s.AfterNested)
-	}
-
-	if s.DecodeStruct.Value != "decoded" {
-		t.Errorf("expected default '%s' string, got %#v", "decoded", s.DecodeStruct.Value)
-	}
-
 	if expected := time.Date(2016, 8, 16, 18, 57, 05, 0, time.UTC); !s.Datetime.Equal(expected) {
 		t.Errorf("expected %s, got %s", expected.Format(time.RFC3339), s.Datetime.Format(time.RFC3339))
 	}
@@ -205,7 +186,7 @@ func TestProcess(t *testing.T) {
 		t.Errorf("expected %d, got %d", 25, s.MultiWordACRWithAutoSplit)
 	}
 
-	u, err := url.Parse("https://github.com/kelseyhightower/envconfig")
+	u, err := url.Parse("https://github.com/charmixer/envconfig")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -223,7 +204,6 @@ func TestParseErrorBool(t *testing.T) {
 	var s Specification
 	os.Clearenv()
 	os.Setenv("ENV_CONFIG_DEBUG", "string")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	err := Process("env_config", &s)
 	v, ok := err.(*ParseError)
 	if !ok {
@@ -241,7 +221,6 @@ func TestParseErrorFloat32(t *testing.T) {
 	var s Specification
 	os.Clearenv()
 	os.Setenv("ENV_CONFIG_RATE", "string")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	err := Process("env_config", &s)
 	v, ok := err.(*ParseError)
 	if !ok {
@@ -259,7 +238,6 @@ func TestParseErrorInt(t *testing.T) {
 	var s Specification
 	os.Clearenv()
 	os.Setenv("ENV_CONFIG_PORT", "string")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	err := Process("env_config", &s)
 	v, ok := err.(*ParseError)
 	if !ok {
@@ -319,7 +297,6 @@ func TestUnsetVars(t *testing.T) {
 	var s Specification
 	os.Clearenv()
 	os.Setenv("USER", "foo")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	if err := Process("env_config", &s); err != nil {
 		t.Error(err.Error())
 	}
@@ -337,7 +314,6 @@ func TestAlternateVarNames(t *testing.T) {
 	os.Setenv("ENV_CONFIG_MULTI_WORD_VAR", "foo")
 	os.Setenv("ENV_CONFIG_MULTI_WORD_VAR_WITH_ALT", "bar")
 	os.Setenv("ENV_CONFIG_MULTI_WORD_VAR_WITH_LOWER_CASE_ALT", "baz")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	if err := Process("env_config", &s); err != nil {
 		t.Error(err.Error())
 	}
@@ -360,51 +336,10 @@ func TestAlternateVarNames(t *testing.T) {
 	}
 }
 
-func TestRequiredVar(t *testing.T) {
-	var s Specification
-	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foobar")
-	if err := Process("env_config", &s); err != nil {
-		t.Error(err.Error())
-	}
-
-	if s.RequiredVar != "foobar" {
-		t.Errorf("expected %s, got %s", "foobar", s.RequiredVar)
-	}
-}
-
-func TestRequiredMissing(t *testing.T) {
-	var s Specification
-	os.Clearenv()
-
-	err := Process("env_config", &s)
-	if err == nil {
-		t.Error("no failure when missing required variable")
-	}
-}
-
-func TestBlankDefaultVar(t *testing.T) {
-	var s Specification
-	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "requiredvalue")
-	if err := Process("env_config", &s); err != nil {
-		t.Error(err.Error())
-	}
-
-	if s.DefaultVar != "foobar" {
-		t.Errorf("expected %s, got %s", "foobar", s.DefaultVar)
-	}
-
-	if *s.SomePointerWithDefault != "foo2baz" {
-		t.Errorf("expected %s, got %s", "foo2baz", *s.SomePointerWithDefault)
-	}
-}
-
 func TestNonBlankDefaultVar(t *testing.T) {
 	var s Specification
 	os.Clearenv()
 	os.Setenv("ENV_CONFIG_DEFAULTVAR", "nondefaultval")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "requiredvalue")
 	if err := Process("env_config", &s); err != nil {
 		t.Error(err.Error())
 	}
@@ -418,7 +353,6 @@ func TestExplicitBlankDefaultVar(t *testing.T) {
 	var s Specification
 	os.Clearenv()
 	os.Setenv("ENV_CONFIG_DEFAULTVAR", "")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "")
 
 	if err := Process("env_config", &s); err != nil {
 		t.Error(err.Error())
@@ -429,47 +363,9 @@ func TestExplicitBlankDefaultVar(t *testing.T) {
 	}
 }
 
-func TestAlternateNameDefaultVar(t *testing.T) {
-	var s Specification
-	os.Clearenv()
-	os.Setenv("BROKER", "betterbroker")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
-	if err := Process("env_config", &s); err != nil {
-		t.Error(err.Error())
-	}
-
-	if s.NoPrefixDefault != "betterbroker" {
-		t.Errorf("expected %q, got %q", "betterbroker", s.NoPrefixDefault)
-	}
-
-	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
-	if err := Process("env_config", &s); err != nil {
-		t.Error(err.Error())
-	}
-
-	if s.NoPrefixDefault != "127.0.0.1" {
-		t.Errorf("expected %q, got %q", "127.0.0.1", s.NoPrefixDefault)
-	}
-}
-
-func TestRequiredDefault(t *testing.T) {
-	var s Specification
-	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
-	if err := Process("env_config", &s); err != nil {
-		t.Error(err.Error())
-	}
-
-	if s.RequiredDefault != "foo2bar" {
-		t.Errorf("expected %q, got %q", "foo2bar", s.RequiredDefault)
-	}
-}
-
 func TestPointerFieldBlank(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	if err := Process("env_config", &s); err != nil {
 		t.Error(err.Error())
 	}
@@ -482,7 +378,6 @@ func TestPointerFieldBlank(t *testing.T) {
 func TestEmptyMapFieldOverride(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	os.Setenv("ENV_CONFIG_MAPFIELD", "")
 	if err := Process("env_config", &s); err != nil {
 		t.Error(err.Error())
@@ -505,7 +400,6 @@ func TestMustProcess(t *testing.T) {
 	os.Setenv("ENV_CONFIG_RATE", "0.5")
 	os.Setenv("ENV_CONFIG_USER", "Kelsey")
 	os.Setenv("SERVICE_HOST", "127.0.0.1")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	MustProcess("env_config", &s)
 
 	defer func() {
@@ -522,7 +416,6 @@ func TestMustProcess(t *testing.T) {
 func TestEmbeddedStruct(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "required")
 	os.Setenv("ENV_CONFIG_ENABLED", "true")
 	os.Setenv("ENV_CONFIG_EMBEDDEDPORT", "1234")
 	os.Setenv("ENV_CONFIG_MULTIWORDVAR", "foo")
@@ -566,7 +459,6 @@ func TestEmbeddedStruct(t *testing.T) {
 func TestEmbeddedButIgnoredStruct(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "required")
 	os.Setenv("ENV_CONFIG_FIRSTEMBEDDEDBUTIGNORED", "was-not-ignored")
 	os.Setenv("ENV_CONFIG_SECONDEMBEDDEDBUTIGNORED", "was-not-ignored")
 	if err := Process("env_config", &s); err != nil {
@@ -583,7 +475,6 @@ func TestEmbeddedButIgnoredStruct(t *testing.T) {
 func TestNonPointerFailsProperly(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "snap")
 
 	err := Process("env_config", s)
 	if err != ErrInvalidSpecification {
@@ -673,25 +564,16 @@ func TestCustomPointerFields(t *testing.T) {
 func TestEmptyPrefixUsesFieldNames(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("REQUIREDVAR", "foo")
 
 	err := Process("", &s)
 	if err != nil {
 		t.Errorf("Process failed: %s", err)
-	}
-
-	if s.RequiredVar != "foo" {
-		t.Errorf(
-			`RequiredVar not populated correctly: expected "foo", got %q`,
-			s.RequiredVar,
-		)
 	}
 }
 
 func TestNestedStructVarName(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "required")
 	val := "found with only short name"
 	os.Setenv("INNER", val)
 	if err := Process("env_config", &s); err != nil {
@@ -705,7 +587,6 @@ func TestNestedStructVarName(t *testing.T) {
 func TestTextUnmarshalerError(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	os.Setenv("ENV_CONFIG_DATETIME", "I'M NOT A DATE")
 
 	err := Process("env_config", &s)
@@ -733,7 +614,6 @@ func TestTextUnmarshalerError(t *testing.T) {
 func TestBinaryUnmarshalerError(t *testing.T) {
 	var s Specification
 	os.Clearenv()
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	os.Setenv("ENV_CONFIG_URLPOINTER", "http://%41:8080/")
 
 	err := Process("env_config", &s)
@@ -792,23 +672,6 @@ func TestCheckDisallowedIgnored(t *testing.T) {
 	}
 }
 
-func TestErrorMessageForRequiredAltVar(t *testing.T) {
-	var s struct {
-		Foo    string `envconfig:"BAR" required:"true"`
-	}
-
-	os.Clearenv()
-	err := Process("env_config", &s)
-
-	if err == nil {
-		t.Error("no failure when missing required variable")
-	}
-
-	if !strings.Contains(err.Error(), " BAR ") {
-		t.Errorf("expected error message to contain BAR, got \"%v\"", err)
-	}
-}
-
 type bracketed string
 
 func (b *bracketed) Set(value string) error {
@@ -850,7 +713,6 @@ func BenchmarkGatherInfo(b *testing.B) {
 	os.Setenv("ENV_CONFIG_COLORCODES", "red:1,green:2,blue:3")
 	os.Setenv("SERVICE_HOST", "127.0.0.1")
 	os.Setenv("ENV_CONFIG_TTL", "30")
-	os.Setenv("ENV_CONFIG_REQUIREDVAR", "foo")
 	os.Setenv("ENV_CONFIG_IGNORED", "was-not-ignored")
 	os.Setenv("ENV_CONFIG_OUTER_INNER", "iamnested")
 	os.Setenv("ENV_CONFIG_AFTERNESTED", "after")
