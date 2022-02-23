@@ -97,7 +97,7 @@ For example, consider the following struct:
 ```Go
 type Specification struct {
     ManualOverride1 string `envconfig:"manual_override_1"`
-    IgnoredVar      string `ignored:"true"`
+    IgnoredVar      string `envconfig:"-"`
     AutoSplitVar    string `split_words:"true"`
 }
 ```

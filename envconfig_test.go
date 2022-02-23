@@ -75,7 +75,7 @@ type Embedded struct {
 	MultiWordVar        string
 	MultiWordVarWithAlt string `envconfig:"MULTI_WITH_DIFFERENT_ALT"`
 	EmbeddedAlt         string `envconfig:"EMBEDDED_WITH_ALT"`
-	EmbeddedIgnored     string `ignored:"true"`
+	EmbeddedIgnored     string `envconfig:"-"`
 }
 
 type EmbeddedButIgnored struct {
