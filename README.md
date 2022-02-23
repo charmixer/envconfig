@@ -1,14 +1,12 @@
 # envconfig
 
-[![Build Status](https://travis-ci.org/kelseyhightower/envconfig.svg)](https://travis-ci.org/kelseyhightower/envconfig)
-
 ```Go
-import "github.com/kelseyhightower/envconfig"
+import "github.com/charmixer/envconfig"
 ```
 
 ## Documentation
 
-See [godoc](http://godoc.org/github.com/kelseyhightower/envconfig)
+See [godoc](http://godoc.org/github.com/charmixer/envconfig)
 
 ## Usage
 
@@ -34,7 +32,7 @@ import (
     "log"
     "time"
 
-    "github.com/kelseyhightower/envconfig"
+    "github.com/charmixer/envconfig"
 )
 
 type Specification struct {
@@ -99,11 +97,8 @@ For example, consider the following struct:
 ```Go
 type Specification struct {
     ManualOverride1 string `envconfig:"manual_override_1"`
-    DefaultVar      string `default:"foobar"`
-    RequiredVar     string `required:"true"`
     IgnoredVar      string `ignored:"true"`
     AutoSplitVar    string `split_words:"true"`
-    RequiredAndAutoSplitVar    string `required:"true" split_words:"true"`
 }
 ```
 
@@ -124,13 +119,6 @@ export MYAPP_MANUAL_OVERRIDE_1="this will be the value"
 
 # export MYAPP_MANUALOVERRIDE1="and this will not"
 ```
-
-If envconfig can't find an environment variable value for `MYAPP_DEFAULTVAR`,
-it will populate it with "foobar" as a default value.
-
-If envconfig can't find an environment variable value for `MYAPP_REQUIREDVAR`,
-it will return an error when asked to process the struct.  If
-`MYAPP_REQUIREDVAR` is present but empty, envconfig will not return an error.
 
 If envconfig can't find an environment variable in the form `PREFIX_MYVAR`, and there
 is a struct tag defined, it will try to populate your variable with an environment

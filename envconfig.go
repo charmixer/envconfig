@@ -75,7 +75,7 @@ func gatherInfo(prefix string, spec interface{}) ([]varInfo, error) {
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
 		ftype := typeOfSpec.Field(i)
-		if !f.CanSet() || isTrue(ftype.Tag.Get("ignored")) {
+		if !f.CanSet() || ftype.Tag.Get("envconfig") == "-" {
 			continue
 		}
 
@@ -195,20 +195,7 @@ func Process(prefix string, spec interface{}) error {
 			value, ok = lookupEnv(info.Alt)
 		}
 
-		def := info.Tags.Get("envDefault")
-		if def != "" && !ok {
-			value = def
-		}
-
-		req := info.Tags.Get("required")
-		if !ok && def == "" {
-			if isTrue(req) {
-				key := info.Key
-				if info.Alt != "" {
-					key = info.Alt
-				}
-				return fmt.Errorf("required key %s missing value", key)
-			}
+		if !ok {
 			continue
 		}
 
